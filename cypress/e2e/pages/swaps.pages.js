@@ -3,7 +3,7 @@ import * as main from '../pages/main.page.js'
 import * as create_tx from '../pages/create_tx.pages.js'
 
 export const inputCurrencyInput = '[id="input-currency-input"]'
-export const outputurrencyInput = '[id="output-currency-input"]'
+export const outputCurrencyInput = '[id="output-currency-input"]'
 const tokenList = '[id="tokens-list"]'
 export const swapBtn = '[id="swap-button"]'
 const exceedFeesChkbox = 'input[id="fees-exceed-checkbox"]'
@@ -14,7 +14,15 @@ export const customRecipient = 'div[id="recipient"]'
 const recipientToggle = 'button[id="toggle-recipient-mode-button"]'
 const orderTypeMenuItem = 'div[class*="MenuItem"]'
 const explorerBtn = '[data-testid="explorer-btn"]'
+const limitPriceFld = '[data-testid="limit-price"]'
+const expiryFld = '[data-testid="expiry"]'
+const slippageFld = '[data-testid="slippage"]'
+const orderIDFld = '[data-testid="order-id"]'
+const widgetFeeFld = '[data-testid="widget-fee"]'
+const interactWithFld = '[data-testid="interact-wth"]'
+const recipientAlert = '[data-testid="recipient-alert"]'
 const confirmSwapStr = 'Confirm Swap'
+
 const swapBtnStr = /Confirm Swap|Swap|Confirm (Approve COW and Swap)|Confirm/
 const orderSubmittedStr = 'Order Submitted'
 const orderIdStr = 'Order ID'
@@ -22,6 +30,7 @@ const cowOrdersUrl = 'https://explorer.cow.fi/orders'
 
 export const blockedAddress = '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c'
 export const blockedAddressStr = 'Blocked address'
+
 const swapStr = 'Swap'
 const limitStr = 'Limit'
 
@@ -164,18 +173,38 @@ export function verifySelectedInputCurrancy(option) {
     cy.get('span').contains(option).should('be.visible')
   })
 }
-export function selectInputCurrency(option) {
-  cy.get(inputCurrencyInput).within(() => {
-    cy.get('button').eq(0).trigger('mouseover').trigger('click')
+
+function selectCurrency(inputSelector, option) {
+  cy.get(inputSelector).within(() => {
+    cy.get('button')
+      .eq(0)
+      .invoke('text')
+      .then(($value) => {
+        cy.log('*** Currency value ' + $value)
+        if (!$value.includes(option)) {
+          cy.log('*** Currency value is different from specified')
+          cy.get('button').eq(0).trigger('mouseover').trigger('click')
+          cy.wrap(true).as('isAction')
+        } else {
+          cy.wrap(false).as('isAction')
+        }
+      })
   })
-  cy.get(tokenList).find('span').contains(option).click()
+
+  cy.get('@isAction').then((isAction) => {
+    if (isAction) {
+      cy.log('*** Clicking on token option')
+      cy.get(tokenList).find('span').contains(option).click()
+    }
+  })
+}
+
+export function selectInputCurrency(option) {
+  selectCurrency(inputCurrencyInput, option)
 }
 
 export function selectOutputCurrency(option) {
-  cy.get(outputurrencyInput).within(() => {
-    cy.get('button').trigger('mouseover').trigger('click')
-  })
-  cy.get(tokenList).find('span').contains(option).click()
+  selectCurrency(outputCurrencyInput, option)
 }
 
 export function setInputValue(value) {
@@ -185,7 +214,7 @@ export function setInputValue(value) {
 }
 
 export function setOutputValue(value) {
-  cy.get(outputurrencyInput).within(() => {
+  cy.get(outputCurrencyInput).within(() => {
     cy.get('input').type(value)
   })
 }
@@ -219,6 +248,14 @@ export function createRegex(pattern, placeholder) {
   return new RegExp(pattern_, 'i')
 }
 
+export function getOrderID() {
+  return new RegExp(`[a-fA-F0-9]{8}`, 'i')
+}
+
+export function getWidgetFee() {
+  return new RegExp(`\\s*\\d*\\.?\\d+\\s*%\\s*`, 'i')
+}
+
 export function checkTokenOrder(regexPattern, option) {
   cy.get(create_tx.txRowTitle)
     .filter(`:contains("${option}")`)
@@ -240,4 +277,17 @@ export function verifyOrderIDUrl() {
     .within(() => {
       cy.get(explorerBtn).should('have.attr', 'href').and('include', cowOrdersUrl)
     })
+}
+
+export function verifyOrderDetails(limitPrice, expiry, slippage, interactWith, oderID, widgetFee) {
+  cy.get(limitPriceFld).contains(limitPrice)
+  cy.get(expiryFld).contains(expiry)
+  cy.get(slippageFld).contains(slippage)
+  cy.get(orderIDFld).contains(oderID)
+  cy.get(widgetFeeFld).contains(widgetFee)
+  cy.get(interactWithFld).contains(interactWith)
+}
+
+export function verifyRecipientAlertIsDisplayed() {
+  main.verifyElementsIsVisible([recipientAlert])
 }
